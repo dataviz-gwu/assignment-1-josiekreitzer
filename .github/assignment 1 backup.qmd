@@ -4,12 +4,11 @@ author: "Josie Kreitzer"
 format: html
 editor: visual
 ---
-
-```{r}
-library(usethis)
-use_git_config(user.name = "josiekreitzer", user.email = "josiekreitzer@gwu.edu")
-```
-
+title: "Assignment 1"
+author: "Josie Kreitzer"
+format: html
+editor: visual
+---
 
 ## Step 1: Download the data from V-Dem
 
@@ -40,7 +39,7 @@ democracy <- vdem |>
     gdp_pc = e_gdppc, 
     region = e_regionpol_6C
     ) |>
-  mutate(
+    mutate(
     region = case_match(region,
                         1 ~ "Eastern Europe", 
                         2 ~ "Latin America",  
@@ -48,7 +47,7 @@ democracy <- vdem |>
                         4 ~ "Africa", 
                         5 ~ "The West", 
                         6 ~ "Asia")
-  )
+    )
 
 # View the data 
 glimpse(democracy)
@@ -109,15 +108,14 @@ glimpse(democracy)
 # Load readr
 library(readr)
 
-
 # Do left join via iso3c and year variables
 
 dem_women <- left_join(democracy, women_emp, by = c("iso3c", "year")) |> 
-  rename(country = country.x) |> 
-  select(!country.y)    
+  rename(country = country.x) |>
+  select(!country.y)
 
 # Save as a .csv file for later
-write_csv(dem_women, ".github/dem_women.csv")
+write_csv(dem_women, ".github2/dem_women.csv")
 
 # View the data
 glimpse(dem_women)
@@ -142,7 +140,7 @@ dem_summary <- dem_women |>
 arrange(desc(women_rep))
 
 # Save as .csv for future use
-write_csv(dem_summary, ".github/dem_summary.csv")
+write_csv(dem_summary, ".github2/dem_summary.csv")
 
 # View the data 
 glimpse(dem_summary)
@@ -167,7 +165,7 @@ dem_summary <- dem_women |>
 arrange(desc(participation))
 
 # Save as .csv for future use
-write_csv(dem_summary, ".github/dem_summary.csv")
+write_csv(dem_summary, ".github2/dem_summary.csv")
 
 # View the data 
 glimpse(dem_summary)
@@ -191,7 +189,7 @@ dem_summary <- dem_women |>
 arrange(desc(equality))
 
 # Save as .csv for future use
-write_csv(dem_summary, ".github/dem_summary.csv")
+write_csv(dem_summary, ".github2/dem_summary.csv")
 
 # View the data 
 glimpse(dem_summary)
@@ -214,7 +212,7 @@ dem_summary <- dem_women |>
 arrange(desc(femp))
 
 # Save as .csv for future use
-write_csv(dem_summary, ".github/dem_summary.csv")
+write_csv(dem_summary, ".github2/dem_summary.csv")
 
 # View the data 
 glimpse(dem_summary)
