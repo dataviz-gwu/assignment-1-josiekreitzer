@@ -1,0 +1,226 @@
+---
+title: "Assignment 1"
+author: "Josie Kreitzer"
+format: html
+editor: visual
+---
+title: "Assignment 1"
+author: "Josie Kreitzer"
+format: html
+editor: visual
+---
+
+## Step 1: Download the data from V-Dem
+
+I will be downloading data from the V-Dem codebook that pertains to the Egalitarian democracy index and the Participatory democracy index. 
+```{r}
+devtools::install_github("vdeminstitute/vdemdata")
+```
+A double check to make sure this data is downloaded still.
+
+```{r}
+#| Label: vdem
+
+# Load packages 
+
+library(vdemdata)
+library(dplyr)
+
+# Download the data 
+
+democracy <- vdem |>
+  filter(year >= 2002) |>
+  select(
+    country = country_name, 
+    vdem_ctry_id = country_id,
+    year,
+    equality = v2x_egaldem,
+    participation = v2x_partipdem, 
+    gdp_pc = e_gdppc, 
+    region = e_regionpol_6C
+    ) |>
+    mutate(
+    region = case_match(region,
+                        1 ~ "Eastern Europe", 
+                        2 ~ "Latin America",  
+                        3 ~ "Middle East",   
+                        4 ~ "Africa", 
+                        5 ~ "The West", 
+                        6 ~ "Asia")
+    )
+
+# View the data 
+glimpse(democracy)
+```
+## Step 2: Download data from the World Bank 
+
+In this section, I will be downloading data from the World Bank. The two data points of interest are female representation and female share of employment in senior and middle management. 
+
+```{r}
+#| label: wb_stats 
+
+## Load packages 
+library(wbstats)
+library(dplyr)
+library(janitor)
+
+# Storage of indicators in objects 
+
+indicators <- c("femp"= "SL.EMP.SMGT.FE.ZS", "women_rep" = "SG.GEN.PARL.ZS")
+
+# Download the data
+
+women_emp <- wb_data(indicators, mrv = 20) |>
+  select(!iso2c) |>
+  rename(year = date) |>
+  mutate(
+    femp = round_to_fraction(femp, denominator = 100), women_rep = round_to_fraction(women_rep, denominator = 100) 
+    )
+ 
+# View the data 
+glimpse(women_emp)
+```
+## Step 3: Merge the Data
+
+The next step is to combine the World Bank and V-Dem data into a single dataset. 
+
+```{r}
+#| label: creating common country code
+
+# Load countrycode
+library(countrycode)
+
+# Create new iso3c variable
+
+democracy <- democracy |>    
+  mutate(iso3c = countrycode(sourcevar = vdem_ctry_id,
+                             origin = "vdem",
+                             destination = "wb"))  |>
+  relocate(iso3c, .after = vdem_ctry_id)
+
+# View the data
+glimpse(democracy)
+                             
+```
+```{r}
+#| label: Merging V-dem and WB
+
+# Load readr
+library(readr)
+
+# Do left join via iso3c and year variables
+
+dem_women <- left_join(democracy, women_emp, by = c("iso3c", "year")) |> 
+  rename(country = country.x) |>
+  select(!country.y)
+
+# Save as a .csv file for later
+write_csv(dem_women, ".github2/dem_women.csv")
+
+# View the data
+glimpse(dem_women)
+
+```
+## Step 4: Summarize the combined data set
+
+The functions involved in this step include the `group_by()`, `summarize()`, and `arrange ()` functions. This data is grouped by region, and will be arranged in either ascending or descending order. The focus will be on a particular variable. The first test is looking at the average representation by women in Parliament per region. 
+
+```{r}
+#| label: use of the functions described above
+
+dem_summary <- dem_women |>
+  group_by(region)  |>
+  summarize(
+    equality = mean(equality, na.rm = TRUE),
+    gdp_pc = mean(gdp_pc, na.rm = TRUE),
+    participation = mean(participation, na.rm = TRUE),
+    women_rep = mean(women_rep, na.rm = TRUE),
+    femp = mean(femp, na.rm = TRUE)
+      ) |> 
+arrange(desc(women_rep))
+
+# Save as .csv for future use
+write_csv(dem_summary, ".github2/dem_summary.csv")
+
+# View the data 
+glimpse(dem_summary)
+    
+```
+For female representation in Parliament, the region "The West" had the highest number (~30). "Latin America" came very close with approximately 24 as their mean, which is contributed to the significant gains this region has made in the past two decades via electoral reform. The lowest score was the "Middle East," a region in which the number of female representatives per country is 0, or in the single digits. 
+
+The second test is looking at which region has the maximum participation in descending order.
+
+```{r}
+#| label: second test using described functions above
+
+dem_summary <- dem_women |>
+  group_by(region)  |>
+  summarize(
+    equality = max(equality, na.rm = TRUE),
+    gdp_pc = max(gdp_pc, na.rm = TRUE),
+    participation = max(participation, na.rm = TRUE),
+    women_rep = max(women_rep, na.rm = TRUE),
+    femp = max(femp, na.rm = TRUE)
+      ) |> 
+arrange(desc(participation))
+
+# Save as .csv for future use
+write_csv(dem_summary, ".github2/dem_summary.csv")
+
+# View the data 
+glimpse(dem_summary)
+```
+The region that best emphasizes the participatory principle of democracy is "The West," with a score of 0.814. The close second is "Latin America" at 0.772. The "Middle East" has the lowest score at 0.494. Participation is important to democracy, and for the women's empowerment movement, as it encourages suffrage and engagement in civil society. 
+
+The third test will examine the minimums of countries in the egalitarian democracy category in descending order. 
+
+```{r}
+#| label: third test of the described functions above
+
+dem_summary <- dem_women |>
+  group_by(region)  |>
+  summarize(
+    equality = min(equality, na.rm = TRUE),
+    gdp_pc = min(gdp_pc, na.rm = TRUE),
+    participation = min(participation, na.rm = TRUE),
+    women_rep = min(women_rep, na.rm = TRUE),
+    femp = min(femp, na.rm = TRUE)
+      ) |> 
+arrange(desc(equality))
+
+# Save as .csv for future use
+write_csv(dem_summary, ".github2/dem_summary.csv")
+
+# View the data 
+glimpse(dem_summary)
+```
+The lowest score when it comes to the egalitarian principle of democracy is from the region "Asia," at 0.019, with the "Middle East" (0.026) and "Africa" (0.026) tied for runner-up. The top scoring region in this database was "The West." Egalitarian democracy is achieved when women are given an equal distribution of rights, freedoms, and powers as their male counterparts.
+
+The final test will be examining the mean of the proportion of women employed in decision making and management roles, with particular attention on the government.
+```{r}
+#| label: fourth test of step 4
+
+dem_summary <- dem_women |>
+  group_by(region)  |>
+  summarize(
+    equality = mean(equality, na.rm = TRUE),
+    gdp_pc = mean(gdp_pc, na.rm = TRUE),
+    participation = mean(participation, na.rm = TRUE),
+    women_rep = mean(women_rep, na.rm = TRUE),
+    femp = mean(femp, na.rm = TRUE)
+      ) |> 
+arrange(desc(femp))
+
+# Save as .csv for future use
+write_csv(dem_summary, ".github2/dem_summary.csv")
+
+# View the data 
+glimpse(dem_summary)
+```
+The results of `femp` are much different than the previous tests. The countries with the highest average proportion of women employed in decision making roles are "Latin America" (~38), "Eastern Europe" (~33), and "Africa" (~31). The lowest were the "Middle East" (~21) and "Asia" (~20). "The West" sits beween the top three regions and the lowest two. 
+
+## Step 5: Interpret Your Data
+
+Norris (2006) summarized the desirability of socially inclusive legislatures and ultimately confirmed that more women are elected in party list PR systems than that of majoritarian, "winner gets all" systems. The first test examining the mean number of female members in Parliament had the region "The West" at the top spot, with "Latin America" coming in close second. Table 3 in Norris (2006) showed that countries from these two regions had a significant increase in the number of women representatives, especially in those with statuatory gender quotas, and women benefited from the PR system in most countries over those in the majoritarian with statuatory guidelines, seen in countries in these particular regions like Costa Rica, Belgium, Argentina, and Peru.
+The region that had the highest emphasis on the participatory principle of democracy is "The West," with a score of 0.814. The close second is "Latin America" at 0.772. Norris explained the significant of inclusivity in her paper. Underrepresentation of women leads to a lack of concern in solving collective action problems for this group and overcoming barriers. The author puts out that women Parliamentarians do best in Nordic countries, like the  Netherlands, which can contribute to the high participation of "The West."
+Even though women in "The West" have higher scores of women Parliamentarians and high participation, they are lacking in numbers in key positions. This means that there are less women in higher decision making roles, particularly in government, in "The West" than that of "Latin America", "Eastern Europe", and "Africa." Norris believes that this problem can be solved by the introduction of quota systems and changing factors like gender norms, party practices, and women's access to resources that can help shape the electoral system. 
